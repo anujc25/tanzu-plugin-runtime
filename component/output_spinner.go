@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -14,6 +16,27 @@ import (
 
 	"github.com/vmware-tanzu/tanzu-plugin-runtime/log"
 )
+
+var spinners []OutputWriterSpinner
+var signalCatcherStarted bool
+var signalChannel = make(chan os.Signal, 1)
+
+var signalCatcher = func() {
+	signalCatcherStarted = true
+	sig := <-signalChannel
+	if sig != nil {
+		for _, s := range spinners {
+			if s != nil {
+				s.StopSpinner()
+			}
+		}
+	}
+	os.Exit(128 + int(sig.(syscall.Signal)))
+}
+
+func init() {
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
+}
 
 // OutputWriterSpinner is OutputWriter augmented with a spinner.
 type OutputWriterSpinner interface {
@@ -145,7 +168,15 @@ func initializeSpinner(ows *outputwriterspinner) OutputWriterSpinner {
 			ows.spinner.Start()
 		}
 	}
+	storeSpinners(ows)
 	return ows
+}
+
+func storeSpinners(s OutputWriterSpinner) {
+	spinners = append(spinners, s)
+	if !signalCatcherStarted {
+		go signalCatcher()
+	}
 }
 
 // RenderWithSpinner stops the running spinner instance, displays FinalText if set, then renders the output

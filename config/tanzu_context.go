@@ -30,6 +30,7 @@ const (
 
 	TanzuMissionControlEndpointKey = "tanzuMissionControlEndpoint"
 	TanzuHubEndpointKey            = "tanzuHubEndpoint"
+	TanzuUCPEndpointKey            = "tanzuUCPEndpoint"
 )
 
 const (
